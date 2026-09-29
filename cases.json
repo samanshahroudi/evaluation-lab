@@ -1,0 +1,8 @@
+[
+  {"id": "handoff", "tenant": "demo", "question": "incident handoff checklist", "relevant_ids": ["ee6ebf989a81b98f2cc4"]},
+  {"id": "credentials", "tenant": "demo", "question": "rotate compromised credentials", "relevant_ids": ["c280dfef309b2631ac1c"]},
+  {"id": "rollback", "tenant": "demo", "question": "deployment rollback error rate", "relevant_ids": ["c53a3395598626b4ffc4"]},
+  {"id": "slo", "tenant": "demo", "question": "availability objective error budget", "relevant_ids": ["bb4035ac4fef13ff171f"]},
+  {"id": "escalation", "tenant": "demo", "question": "primary responder escalation ten minutes", "relevant_ids": ["a1e608f365be6cb57c23"]},
+  {"id": "unanswerable", "tenant": "demo", "question": "quantum banana telescope", "relevant_ids": []}
+]
