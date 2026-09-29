@@ -6,8 +6,8 @@ import json
 import re
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 
 def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
@@ -42,14 +42,26 @@ def evaluate(cases: list[dict], retrieve: Callable[[str, str], list[dict]]) -> d
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--cases", default=str(Path(__file__).with_name("cases.json")))
-    parser.add_argument("--db", required=True)
+    parser.add_argument("--predictions", required=True, help="JSONL rows with case_id and retrieved hits")
     parser.add_argument("--min-recall", type=float, default=0.8)
     parser.add_argument("--trace-file", help="Append redacted JSONL spans for local inspection")
     args = parser.parse_args()
-    from importlib import import_module
-    store = import_module("02_knowledge_retrieval.retrieval").Store(args.db)
     cases = json.loads(Path(args.cases).read_text())
-    report = evaluate(cases, lambda tenant, question: store.search(tenant, question))
+    predictions = {}
+    latencies = {}
+    for line in Path(args.predictions).read_text().splitlines():
+        row = json.loads(line)
+        case_id = row["case_id"]
+        if case_id in predictions:
+            raise ValueError(f"duplicate prediction for {case_id}")
+        predictions[case_id] = row["hits"]
+        latencies[case_id] = row.get("latency_ms")
+    if set(predictions) != {case["id"] for case in cases}:
+        raise ValueError("predictions must contain exactly one row per case")
+    case_ids = {(case["tenant"], case["question"]): case["id"] for case in cases}
+    report = evaluate(cases, lambda tenant, question: predictions[case_ids[tenant, question]])
+    for row in report["cases"]:
+        row["latency_ms"] = latencies[row["case"]]
     if args.trace_file:
         trace_id = uuid.uuid4().hex
         with Path(args.trace_file).open("a") as handle:

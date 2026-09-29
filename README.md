@@ -8,18 +8,18 @@ RAG changes are hard to review without a stable dataset and a release gate. This
 
 `labeled cases → retriever → per-case hit/recall/latency → aggregate JSON → exit status`
 
-`evaluate.py` accepts a retriever function and emits per-case scores, including recall and reciprocal rank. Its CLI uses project 02's SQLite store. `cases.json` maps questions and tenants to expected chunk IDs, including an unanswerable case. The process exits nonzero when mean recall falls below the threshold or a tenant mismatch appears. `--trace-file traces.jsonl` writes one redacted span per case with a shared trace ID, latency, and score. `citation_check` verifies that a generated answer contains only retrieved chunk IDs; it does not prove that the cited text supports a claim.
+`evaluate.py` accepts a retriever function and emits per-case scores, including recall and reciprocal rank. Its CLI reads JSONL predictions, so any retriever can supply results. Each row has `case_id`, `hits` (ordered objects with `id` and `tenant`), and optional `latency_ms`. `cases.json` maps questions and tenants to expected chunk IDs, including an unanswerable case. The process exits nonzero when mean recall falls below the threshold or a tenant mismatch appears. `--trace-file traces.jsonl` writes one redacted span per case with a shared trace ID, supplied latency, and score. `citation_check` verifies that a generated answer contains only retrieved chunk IDs; it does not prove that the cited text supports a claim.
 
 ## Run and example
 
-From `portfolio`:
+From this repository after `python -m pip install -e ".[dev]"`:
 
 ```bash
-python -m 05_evaluation_lab.seed --db eval.db
-python -m 05_evaluation_lab.evaluate --db eval.db --min-recall 0.8 --trace-file traces.jsonl
+python -m evaluation_lab.seed --out predictions.jsonl
+python -m evaluation_lab.evaluate --predictions predictions.jsonl --min-recall 0.8 --trace-file traces.jsonl
 ```
 
-The output is JSON suitable for CI. Edit the corpus or query and rerun to observe a regression. Tests live in `../tests/test_portfolio.py`.
+The seed command runs a simple lexical baseline over the included fixture documents and writes one prediction per labeled case. Replace that file with output from your own retriever to compare systems; keep the same chunk IDs and tenant fields. The evaluation output is JSON suitable for CI. Tests live in `tests/test_evaluate.py`.
 
 ## Concepts and choices
 
@@ -32,3 +32,7 @@ Six labeled queries are far too small for a real release gate. Build a represent
 ## Interview preparation
 
 Explain why retrieval and generation need separate metrics, what recall@k misses, why model-graded answers need calibration, how to avoid test-set leakage, and how you would set a release threshold from production failures.
+
+## Verify
+
+Run `python -m pytest -q` and `python -m ruff check .` from this repository.

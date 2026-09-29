@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retrieval-evaluation-lab"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.9,<1"]
+
+[tool.setuptools.packages.find]
+include = ["evaluation_lab*"]
+
+[tool.setuptools.package-data]
+evaluation_lab = ["cases.json", "fixtures/*.md"]
+
+[tool.ruff]
+line-length = 100
