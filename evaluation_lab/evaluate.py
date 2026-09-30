@@ -13,7 +13,7 @@ from pathlib import Path
 def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
     start = time.perf_counter()
     hits = retrieve(case["tenant"], case["question"])
-    ids = [hit["id"] for hit in hits]
+    ids = [hit["id"] for hit in hits[:5] if hit["tenant"] == case["tenant"]]
     expected = set(case["relevant_ids"])
     matched = expected & set(ids[:5])
     first_rank = next((rank for rank, key in enumerate(ids[:5], 1) if key in expected), None)
