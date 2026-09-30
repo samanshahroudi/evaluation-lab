@@ -9,6 +9,7 @@ def test_gate_and_tenant_safety():
     assert report["tenant_safe"]
     assert citation_check(f"The owner is named [{key}]", {key})
     assert not citation_check("The owner is named", {key})
+    assert not citation_check(f"The owner is named [{key}] [{key}f]", {key})
     unsafe = evaluate(cases, lambda tenant, question: [{"id": key, "tenant": "other"}])
     assert not unsafe["tenant_safe"]
     assert unsafe["mean_recall_at_5"] == 0

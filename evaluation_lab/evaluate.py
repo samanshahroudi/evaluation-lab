@@ -26,7 +26,7 @@ def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
 
 
 def citation_check(answer: str, allowed_ids: set[str]) -> bool:
-    cited = set(re.findall(r"\[([a-f0-9]{20})\]", answer))
+    cited = set(re.findall(r"\[([a-f0-9]+)\]", answer))
     return bool(cited) and cited <= allowed_ids
 
 
