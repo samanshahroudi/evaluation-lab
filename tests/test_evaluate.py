@@ -30,3 +30,11 @@ def test_relevant_hit_beyond_top_five_is_not_scored():
     report = evaluate(cases, lambda tenant, question: hits)
     assert report["mean_reciprocal_rank"] == 0
     assert report["mean_recall_at_5"] == 0
+
+
+def test_citation_check_rejects_unknown_nonhex_ids():
+    allowed = {"a" * 20}
+    answer = f"Recovery confirmed [{'a' * 20}]"
+    assert not citation_check(answer + " [unknown-source]", allowed)
+    assert not citation_check(answer + " []", allowed)
+    assert citation_check("Recovery confirmed [runbook-1]", {"runbook-1"})

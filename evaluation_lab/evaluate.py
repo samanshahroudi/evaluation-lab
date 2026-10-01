@@ -27,7 +27,8 @@ def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
 
 
 def citation_check(answer: str, allowed_ids: set[str]) -> bool:
-    cited = set(re.findall(r"\[([a-f0-9]+)\]", answer))
+    """Treat every square-bracketed reference as a chunk ID and check membership."""
+    cited = set(re.findall(r"\[([^\[\]]*)\]", answer))
     return bool(cited) and cited <= allowed_ids
 
 
