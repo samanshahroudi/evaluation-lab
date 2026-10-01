@@ -16,7 +16,8 @@ def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
     ids = [hit["id"] for hit in hits[:5] if hit["tenant"] == case["tenant"]]
     expected = set(case["relevant_ids"])
     matched = expected & set(ids[:5])
-    first_rank = next((rank for rank, key in enumerate(ids[:5], 1) if key in expected), None)
+    first_rank = next((rank for rank, hit in enumerate(hits[:5], 1)
+                       if hit["tenant"] == case["tenant"] and hit["id"] in expected), None)
     negative_ok = not expected and not hits
     return {"case": case["id"], "hit_at_5": bool(matched) if expected else negative_ok,
             "recall_at_5": len(matched) / len(expected) if expected else float(negative_ok),

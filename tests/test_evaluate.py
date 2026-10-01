@@ -13,3 +13,20 @@ def test_gate_and_tenant_safety():
     unsafe = evaluate(cases, lambda tenant, question: [{"id": key, "tenant": "other"}])
     assert not unsafe["tenant_safe"]
     assert unsafe["mean_recall_at_5"] == 0
+
+
+def test_reciprocal_rank_preserves_foreign_tenant_positions():
+    cases = [{"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": ["a"]}]
+    hits = [{"id": "a", "tenant": "other"}, {"id": "a", "tenant": "demo"}]
+    report = evaluate(cases, lambda tenant, question: hits)
+    assert report["mean_reciprocal_rank"] == 0.5
+    assert report["mean_recall_at_5"] == 1
+    assert not report["tenant_safe"]
+
+
+def test_relevant_hit_beyond_top_five_is_not_scored():
+    cases = [{"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": ["a"]}]
+    hits = [{"id": "a", "tenant": "other"}] * 5 + [{"id": "a", "tenant": "demo"}]
+    report = evaluate(cases, lambda tenant, question: hits)
+    assert report["mean_reciprocal_rank"] == 0
+    assert report["mean_recall_at_5"] == 0
