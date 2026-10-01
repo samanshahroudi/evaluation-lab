@@ -48,6 +48,8 @@ def main() -> None:
     parser.add_argument("--min-recall", type=float, default=0.8)
     parser.add_argument("--trace-file", help="Append redacted JSONL spans for local inspection")
     args = parser.parse_args()
+    if not 0 <= args.min_recall <= 1:
+        parser.error("--min-recall must be between 0 and 1")
     cases = json.loads(Path(args.cases).read_text())
     predictions = {}
     latencies = {}
