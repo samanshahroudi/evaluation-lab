@@ -35,6 +35,8 @@ def citation_check(answer: str, allowed_ids: set[str]) -> bool:
 def evaluate(cases: list[dict], retrieve: Callable[[str, str], list[dict]]) -> dict:
     if not cases or any("relevant_ids" not in case for case in cases):
         raise ValueError("evaluation needs labeled cases")
+    if len({case["id"] for case in cases}) != len(cases):
+        raise ValueError("evaluation needs unique case IDs")
     rows = [score_case(case, retrieve) for case in cases]
     return {"cases": rows, "mean_recall_at_5": sum(r["recall_at_5"] for r in rows) / len(rows),
             "mean_reciprocal_rank": sum(r["reciprocal_rank"] for r in rows) / len(rows),

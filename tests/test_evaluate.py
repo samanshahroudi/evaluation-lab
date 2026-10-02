@@ -74,3 +74,16 @@ def test_cli_recall_threshold_boundaries(tmp_path, monkeypatch, capsys, threshol
             main()
         assert exc.value.code == exit_code
     assert json.loads(capsys.readouterr().out)["mean_recall_at_5"] == 0
+
+
+def test_duplicate_case_ids_are_rejected_before_retrieval():
+    cases = [
+        {"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": ["a"]},
+        {"id": "one", "tenant": "demo", "question": "rollback", "relevant_ids": ["b"]},
+    ]
+
+    def unexpected_retrieval(tenant, question):
+        pytest.fail("duplicate case IDs must be rejected before retrieval")
+
+    with pytest.raises(ValueError, match="unique case IDs"):
+        evaluate(cases, unexpected_retrieval)
