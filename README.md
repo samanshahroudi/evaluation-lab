@@ -22,6 +22,7 @@ python -m evaluation_lab.evaluate --predictions predictions.jsonl --min-recall 0
 The seed command runs a simple lexical baseline over the included fixture documents and writes one prediction per labeled case. Replace that file with output from your own retriever to compare systems; keep the same chunk IDs and tenant fields. The evaluation output is JSON suitable for CI. Tests live in `tests/test_evaluate.py`.
 
 Each labeled case must have a unique `id`; duplicate IDs are rejected so predictions and trace spans remain unambiguous.
+Supplied `latency_ms` values must be finite, nonnegative numbers; omitted or null values remain null in reports. Invalid latencies are rejected before producing a report or writing traces.
 The CLI also requires unique tenant/question pairs, because its retriever selects predictions by tenant and question. Ambiguous pairs are rejected before scoring or writing traces.
 
 ## Concepts and choices

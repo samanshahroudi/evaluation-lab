@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import time
 import uuid
@@ -61,7 +62,13 @@ def main() -> None:
         if case_id in predictions:
             raise ValueError(f"duplicate prediction for {case_id}")
         predictions[case_id] = row["hits"]
-        latencies[case_id] = row.get("latency_ms")
+        latency = row.get("latency_ms")
+        if latency is not None and (
+            isinstance(latency, bool) or not isinstance(latency, (int, float))
+            or not math.isfinite(latency) or latency < 0
+        ):
+            raise ValueError(f"latency_ms must be a finite nonnegative number for {case_id}")
+        latencies[case_id] = latency
     if set(predictions) != {case["id"] for case in cases}:
         raise ValueError("predictions must contain exactly one row per case")
     case_ids = {(case["tenant"], case["question"]): case["id"] for case in cases}

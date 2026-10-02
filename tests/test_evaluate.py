@@ -110,3 +110,40 @@ def test_cli_rejects_ambiguous_case_lookup_without_writing_traces(tmp_path, monk
         main()
     assert capsys.readouterr().out == ""
     assert not trace.exists()
+
+
+@pytest.mark.parametrize("latency", [-1, float("nan"), float("inf"), -float("inf"),
+                                   "12", True])
+def test_cli_rejects_invalid_latency_without_writing_traces(tmp_path, monkeypatch, capsys, latency):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{"id": "one", "tenant": "demo", "question": "handoff",
+                                 "relevant_ids": ["a"]}]))
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text(json.dumps({"case_id": "one", "hits": [], "latency_ms": latency}) + "\n")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(ValueError, match="latency_ms must be a finite nonnegative number"):
+        main()
+    assert capsys.readouterr().out == ""
+    assert not trace.exists()
+
+
+@pytest.mark.parametrize("latency", [None, 0, 12.5])
+def test_cli_preserves_valid_optional_latency(tmp_path, monkeypatch, capsys, latency):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{"id": "one", "tenant": "demo", "question": "handoff",
+                                 "relevant_ids": []}]))
+    predictions = tmp_path / "predictions.jsonl"
+    prediction = {"case_id": "one", "hits": []}
+    if latency is not None:
+        prediction["latency_ms"] = latency
+    predictions.write_text(json.dumps(prediction) + "\n")
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions)])
+    main()
+    assert json.loads(capsys.readouterr().out)["cases"][0]["latency_ms"] == latency
