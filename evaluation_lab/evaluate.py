@@ -65,6 +65,8 @@ def main() -> None:
     if set(predictions) != {case["id"] for case in cases}:
         raise ValueError("predictions must contain exactly one row per case")
     case_ids = {(case["tenant"], case["question"]): case["id"] for case in cases}
+    if len(case_ids) != len(cases):
+        raise ValueError("CLI cases must have unique tenant/question pairs")
     report = evaluate(cases, lambda tenant, question: predictions[case_ids[tenant, question]])
     for row in report["cases"]:
         row["latency_ms"] = latencies[row["case"]]

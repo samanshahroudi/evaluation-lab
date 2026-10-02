@@ -87,3 +87,26 @@ def test_duplicate_case_ids_are_rejected_before_retrieval():
 
     with pytest.raises(ValueError, match="unique case IDs"):
         evaluate(cases, unexpected_retrieval)
+
+
+def test_cli_rejects_ambiguous_case_lookup_without_writing_traces(tmp_path, monkeypatch, capsys):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([
+        {"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": ["a"]},
+        {"id": "two", "tenant": "demo", "question": "handoff", "relevant_ids": ["a"]},
+    ]))
+    predictions = tmp_path / "predictions.jsonl"
+    # Reusing the second prediction would falsely give both cases perfect recall.
+    predictions.write_text("\n".join(json.dumps(row) for row in [
+        {"case_id": "one", "hits": []},
+        {"case_id": "two", "hits": [{"id": "a", "tenant": "demo"}]},
+    ]) + "\n")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(ValueError, match="unique tenant/question pairs"):
+        main()
+    assert capsys.readouterr().out == ""
+    assert not trace.exists()
