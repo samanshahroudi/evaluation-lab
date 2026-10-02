@@ -36,6 +36,10 @@ def citation_check(answer: str, allowed_ids: set[str]) -> bool:
 def evaluate(cases: list[dict], retrieve: Callable[[str, str], list[dict]]) -> dict:
     if not cases or any("relevant_ids" not in case for case in cases):
         raise ValueError("evaluation needs labeled cases")
+    if any(not isinstance(case["relevant_ids"], list)
+           or any(not isinstance(key, str) or not key.strip() for key in case["relevant_ids"])
+           for case in cases):
+        raise ValueError("relevant_ids must be a list of nonblank strings")
     if len({case["id"] for case in cases}) != len(cases):
         raise ValueError("evaluation needs unique case IDs")
     rows = [score_case(case, retrieve) for case in cases]

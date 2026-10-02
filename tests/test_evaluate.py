@@ -89,6 +89,17 @@ def test_duplicate_case_ids_are_rejected_before_retrieval():
         evaluate(cases, unexpected_retrieval)
 
 
+@pytest.mark.parametrize("labels", ["", "a", None, {}, [None], [1], [""], ["   "]])
+def test_invalid_relevance_labels_are_rejected_before_retrieval(labels):
+    cases = [{"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": labels}]
+
+    def unexpected_retrieval(tenant, question):
+        pytest.fail("invalid labels must be rejected before retrieval")
+
+    with pytest.raises(ValueError, match="relevant_ids must be a list of nonblank strings"):
+        evaluate(cases, unexpected_retrieval)
+
+
 def test_cli_rejects_ambiguous_case_lookup_without_writing_traces(tmp_path, monkeypatch, capsys):
     from evaluation_lab.evaluate import main
 
