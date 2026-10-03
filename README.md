@@ -21,6 +21,8 @@ python -m evaluation_lab.evaluate --predictions predictions.jsonl --min-recall 0
 
 The seed command runs a simple lexical baseline over the included fixture documents and writes one prediction per labeled case. Replace that file with output from your own retriever to compare systems; keep the same chunk IDs and tenant fields. The evaluation output is JSON suitable for CI. Tests live in `tests/test_evaluate.py`.
 
+`hits` must be a list of objects with nonblank string `id` and `tenant` fields; use `[]` for no results. Malformed hits are rejected before a report or traces are written.
+
 Each labeled case must have a unique, nonblank string `id`; duplicate IDs are rejected so predictions and trace spans remain unambiguous.
 Each case also requires nonblank string `tenant` and `question` fields; invalid inputs are rejected before any retrieval runs.
 `relevant_ids` must be a list of nonblank strings; use an empty list for an unanswerable case. Malformed labels are rejected before retrieval or scoring.

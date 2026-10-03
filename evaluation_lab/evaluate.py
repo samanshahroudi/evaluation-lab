@@ -14,6 +14,13 @@ from pathlib import Path
 def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
     start = time.perf_counter()
     hits = retrieve(case["tenant"], case["question"])
+    if not isinstance(hits, list) or any(
+        not isinstance(hit, dict)
+        or any(not isinstance(hit.get(field), str) or not hit[field].strip()
+               for field in ("id", "tenant"))
+        for hit in hits
+    ):
+        raise ValueError("hits must be a list of objects with nonblank string id and tenant")
     ids = [hit["id"] for hit in hits[:5] if hit["tenant"] == case["tenant"]]
     expected = set(case["relevant_ids"])
     matched = expected & set(ids[:5])
