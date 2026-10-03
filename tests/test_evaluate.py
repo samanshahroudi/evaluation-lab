@@ -158,3 +158,36 @@ def test_cli_preserves_valid_optional_latency(tmp_path, monkeypatch, capsys, lat
                                     "--predictions", str(predictions)])
     main()
     assert json.loads(capsys.readouterr().out)["cases"][0]["latency_ms"] == latency
+
+
+@pytest.mark.parametrize("case_id", [None, "", "   ", 1, True, [], {}])
+def test_invalid_case_ids_are_rejected_before_retrieval(case_id):
+    cases = [{"id": case_id, "tenant": "demo", "question": "handoff", "relevant_ids": ["a"]}]
+
+    def unexpected_retrieval(tenant, question):
+        pytest.fail("invalid case IDs must be rejected before retrieval")
+
+    with pytest.raises(ValueError, match="case IDs must be nonblank strings"):
+        evaluate(cases, unexpected_retrieval)
+
+
+def test_missing_case_id_is_rejected_before_retrieval():
+    cases = [{"tenant": "demo", "question": "handoff", "relevant_ids": []}]
+    with pytest.raises(ValueError, match="case IDs must be nonblank strings"):
+        evaluate(cases, lambda tenant, question: pytest.fail("unexpected retrieval"))
+
+
+@pytest.mark.parametrize("case_id", [None, "", [], {}])
+def test_cli_rejects_invalid_case_ids_before_reading_predictions(tmp_path, monkeypatch, case_id):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{"id": case_id, "tenant": "demo", "question": "handoff",
+                                 "relevant_ids": []}]))
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(tmp_path / "missing.jsonl"),
+                                    "--trace-file", str(trace)])
+    with pytest.raises(ValueError, match="case IDs must be nonblank strings"):
+        main()
+    assert not trace.exists()

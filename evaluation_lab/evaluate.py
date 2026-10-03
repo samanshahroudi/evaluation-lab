@@ -33,15 +33,21 @@ def citation_check(answer: str, allowed_ids: set[str]) -> bool:
     return bool(cited) and cited <= allowed_ids
 
 
-def evaluate(cases: list[dict], retrieve: Callable[[str, str], list[dict]]) -> dict:
+def _validate_cases(cases: list[dict]) -> None:
     if not cases or any("relevant_ids" not in case for case in cases):
         raise ValueError("evaluation needs labeled cases")
     if any(not isinstance(case["relevant_ids"], list)
            or any(not isinstance(key, str) or not key.strip() for key in case["relevant_ids"])
            for case in cases):
         raise ValueError("relevant_ids must be a list of nonblank strings")
+    if any(not isinstance(case.get("id"), str) or not case["id"].strip() for case in cases):
+        raise ValueError("case IDs must be nonblank strings")
     if len({case["id"] for case in cases}) != len(cases):
         raise ValueError("evaluation needs unique case IDs")
+
+
+def evaluate(cases: list[dict], retrieve: Callable[[str, str], list[dict]]) -> dict:
+    _validate_cases(cases)
     rows = [score_case(case, retrieve) for case in cases]
     return {"cases": rows, "mean_recall_at_5": sum(r["recall_at_5"] for r in rows) / len(rows),
             "mean_reciprocal_rank": sum(r["reciprocal_rank"] for r in rows) / len(rows),
@@ -58,6 +64,7 @@ def main() -> None:
     if not 0 <= args.min_recall <= 1:
         parser.error("--min-recall must be between 0 and 1")
     cases = json.loads(Path(args.cases).read_text())
+    _validate_cases(cases)
     predictions = {}
     latencies = {}
     for line in Path(args.predictions).read_text().splitlines():
