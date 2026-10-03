@@ -81,6 +81,10 @@ def main() -> None:
     latencies = {}
     for line in Path(args.predictions).read_text().splitlines():
         row = json.loads(line)
+        if (not isinstance(row, dict)
+                or not isinstance(row.get("case_id"), str) or not row["case_id"].strip()
+                or "hits" not in row):
+            raise ValueError("prediction rows need a nonblank string case_id and hits")
         case_id = row["case_id"]
         if case_id in predictions:
             raise ValueError(f"duplicate prediction for {case_id}")

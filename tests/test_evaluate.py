@@ -257,3 +257,23 @@ def test_cli_rejects_nonobject_cases_before_reading_predictions(tmp_path, monkey
     with pytest.raises(ValueError, match="evaluation needs labeled cases"):
         main()
     assert not trace.exists()
+
+
+@pytest.mark.parametrize("prediction", [None, [], "row", 1, {},
+                                       {"case_id": "one"}, {"case_id": [], "hits": []},
+                                       {"case_id": " ", "hits": []}])
+def test_cli_rejects_malformed_prediction_rows(tmp_path, monkeypatch, capsys, prediction):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{"id": "one", "tenant": "demo", "question": "unknown",
+                                 "relevant_ids": []}]))
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text(json.dumps(prediction) + "\n")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(ValueError, match="prediction rows need a nonblank string case_id and hits"):
+        main()
+    assert capsys.readouterr().out == ""
+    assert not trace.exists()
