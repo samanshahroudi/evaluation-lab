@@ -235,3 +235,25 @@ def test_cli_rejects_string_hits_without_report_or_traces(tmp_path, monkeypatch,
         main()
     assert capsys.readouterr().out == ""
     assert not trace.exists()
+
+
+@pytest.mark.parametrize("cases", [None, 1, True, "relevant_ids", {},
+                                 {"one": {"relevant_ids": []}}, [],
+                                 [None], [1], [True], ["relevant_ids"], [[]]])
+def test_malformed_case_containers_are_rejected_before_retrieval(cases):
+    with pytest.raises(ValueError, match="evaluation needs labeled cases"):
+        evaluate(cases, lambda tenant, question: pytest.fail("unexpected retrieval"))
+
+
+def test_cli_rejects_nonobject_cases_before_reading_predictions(tmp_path, monkeypatch):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text("[null]")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(tmp_path / "missing.jsonl"),
+                                    "--trace-file", str(trace)])
+    with pytest.raises(ValueError, match="evaluation needs labeled cases"):
+        main()
+    assert not trace.exists()

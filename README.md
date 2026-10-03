@@ -23,6 +23,8 @@ The seed command runs a simple lexical baseline over the included fixture docume
 
 `hits` must be a list of objects with nonblank string `id` and `tenant` fields; use `[]` for no results. Malformed hits are rejected before a report or traces are written.
 
+Cases must be a nonempty JSON list of objects with relevance labels. Malformed containers are rejected before retrieval.
+
 Each labeled case must have a unique, nonblank string `id`; duplicate IDs are rejected so predictions and trace spans remain unambiguous.
 Each case also requires nonblank string `tenant` and `question` fields; invalid inputs are rejected before any retrieval runs.
 `relevant_ids` must be a list of nonblank strings; use an empty list for an unanswerable case. Malformed labels are rejected before retrieval or scoring.

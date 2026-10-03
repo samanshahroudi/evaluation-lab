@@ -41,7 +41,9 @@ def citation_check(answer: str, allowed_ids: set[str]) -> bool:
 
 
 def _validate_cases(cases: list[dict]) -> None:
-    if not cases or any("relevant_ids" not in case for case in cases):
+    if not isinstance(cases, list) or not cases or any(
+        not isinstance(case, dict) or "relevant_ids" not in case for case in cases
+    ):
         raise ValueError("evaluation needs labeled cases")
     if any(not isinstance(case["relevant_ids"], list)
            or any(not isinstance(key, str) or not key.strip() for key in case["relevant_ids"])
