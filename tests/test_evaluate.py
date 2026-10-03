@@ -5,6 +5,24 @@ import pytest
 from evaluation_lab.evaluate import citation_check, evaluate
 
 
+@pytest.mark.parametrize("field", ["tenant", "question"])
+@pytest.mark.parametrize("value", [None, "", "   ", 1, True, [], {}])
+def test_invalid_retrieval_inputs_are_rejected_before_retrieval(field, value):
+    cases = [{"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": []},
+             {"id": "two", "tenant": "demo", "question": "rollback", "relevant_ids": []}]
+    cases[1][field] = value
+    with pytest.raises(ValueError, match=f"{field} must be a nonblank string"):
+        evaluate(cases, lambda tenant, question: pytest.fail("unexpected retrieval"))
+
+
+@pytest.mark.parametrize("field", ["tenant", "question"])
+def test_missing_retrieval_inputs_are_rejected_before_retrieval(field):
+    case = {"id": "one", "tenant": "demo", "question": "handoff", "relevant_ids": []}
+    del case[field]
+    with pytest.raises(ValueError, match=f"{field} must be a nonblank string"):
+        evaluate([case], lambda tenant, question: pytest.fail("unexpected retrieval"))
+
+
 def test_gate_and_tenant_safety():
     key = "a" * 20
     cases = [{"id": "one", "tenant": "demo", "question": "incident handoff", "relevant_ids": [key]}]

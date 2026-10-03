@@ -44,6 +44,9 @@ def _validate_cases(cases: list[dict]) -> None:
         raise ValueError("case IDs must be nonblank strings")
     if len({case["id"] for case in cases}) != len(cases):
         raise ValueError("evaluation needs unique case IDs")
+    for field in ("tenant", "question"):
+        if any(not isinstance(case.get(field), str) or not case[field].strip() for case in cases):
+            raise ValueError(f"{field} must be a nonblank string")
 
 
 def evaluate(cases: list[dict], retrieve: Callable[[str, str], list[dict]]) -> dict:
