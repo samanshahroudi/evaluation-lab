@@ -5,6 +5,45 @@ import pytest
 from evaluation_lab.evaluate import citation_check, evaluate
 
 
+@pytest.mark.parametrize("input_file", ["cases", "predictions"])
+@pytest.mark.parametrize("problem", ["missing", "directory", "invalid_utf8", "invalid_json"])
+def test_cli_input_file_errors_are_usage_errors_without_output(
+    tmp_path, monkeypatch, capsys, input_file, problem,
+):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    predictions = tmp_path / "predictions.jsonl"
+    cases.write_text(json.dumps([{
+        "id": "one", "tenant": "demo", "question": "unknown", "relevant_ids": [],
+    }]), encoding="utf-8")
+    predictions.write_text('{"case_id": "one", "hits": []}\n', encoding="utf-8")
+    broken = cases if input_file == "cases" else predictions
+    if problem in ("missing", "directory"):
+        broken.unlink()
+        if problem == "directory":
+            broken.mkdir()
+    elif problem == "invalid_utf8":
+        broken.write_bytes(b"\xff")
+    else:
+        broken.write_text('{"case_id": "one", "hits": []}\n{broken' if input_file == "predictions"
+                          else '{broken', encoding="utf-8")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert str(broken) in captured.err
+    assert "error:" in captured.err
+    assert "Traceback" not in captured.err
+    if input_file == "predictions" and problem == "invalid_json":
+        assert "line 2" in captured.err
+    assert not trace.exists()
+
+
 @pytest.mark.parametrize("answer", ["[[runbook-1]]", "[outer [runbook-1]]",
                                     "[runbook-1] [unfinished", "[runbook-1] stray]"])
 def test_citation_check_rejects_malformed_brackets(answer):

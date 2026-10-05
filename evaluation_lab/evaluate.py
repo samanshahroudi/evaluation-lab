@@ -76,12 +76,22 @@ def main() -> None:
     args = parser.parse_args()
     if not 0 <= args.min_recall <= 1:
         parser.error("--min-recall must be between 0 and 1")
-    cases = json.loads(Path(args.cases).read_text())
+    try:
+        cases = json.loads(Path(args.cases).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        parser.error(f"cannot read cases file {args.cases}: {exc}")
     _validate_cases(cases)
     predictions = {}
     latencies = {}
-    for line in Path(args.predictions).read_text().splitlines():
-        row = json.loads(line)
+    try:
+        lines = Path(args.predictions).read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        parser.error(f"cannot read predictions file {args.predictions}: {exc}")
+    for line_number, line in enumerate(lines, 1):
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            parser.error(f"invalid JSON in predictions file {args.predictions}, line {line_number}: {exc}")
         if (not isinstance(row, dict)
                 or not isinstance(row.get("case_id"), str) or not row["case_id"].strip()
                 or "hits" not in row):
