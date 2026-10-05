@@ -5,6 +5,17 @@ import pytest
 from evaluation_lab.evaluate import citation_check, evaluate
 
 
+@pytest.mark.parametrize("answer", ["[[runbook-1]]", "[outer [runbook-1]]",
+                                    "[runbook-1] [unfinished", "[runbook-1] stray]"])
+def test_citation_check_rejects_malformed_brackets(answer):
+    assert not citation_check(answer, {"runbook-1"})
+
+
+def test_citation_check_accepts_repeated_and_multiple_valid_references():
+    assert citation_check("Recovery [runbook-1] and handoff [handoff-2] [runbook-1].",
+                          {"runbook-1", "handoff-2"})
+
+
 @pytest.mark.parametrize("field", ["tenant", "question"])
 @pytest.mark.parametrize("value", [None, "", "   ", 1, True, [], {}])
 def test_invalid_retrieval_inputs_are_rejected_before_retrieval(field, value):
