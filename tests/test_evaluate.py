@@ -323,7 +323,12 @@ def test_cli_rejects_malformed_prediction_rows(tmp_path, monkeypatch, capsys, pr
     trace = tmp_path / "traces.jsonl"
     monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
                                     "--predictions", str(predictions), "--trace-file", str(trace)])
-    with pytest.raises(ValueError, match="prediction rows need a nonblank string case_id and hits"):
+    with pytest.raises(SystemExit) as exc:
         main()
-    assert capsys.readouterr().out == ""
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "invalid prediction at line 1" in captured.err
+    assert "prediction rows need a nonblank string case_id and hits" in captured.err
+    assert "Traceback" not in captured.err
     assert not trace.exists()
