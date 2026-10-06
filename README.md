@@ -26,6 +26,7 @@ Case and prediction files use UTF-8. Missing or unreadable files and invalid JSO
 `hits` must be a list of objects with nonblank string `id` and `tenant` fields; use `[]` for no results. Malformed hits are rejected before a report or traces are written.
 
 Cases must be a nonempty JSON list of objects with relevance labels. Malformed containers are rejected before retrieval.
+Invalid case definitions produce CLI usage errors (exit 2), including the cases file path and validation reason, before reading predictions or writing traces.
 
 Each labeled case must have a unique, nonblank string `id`; duplicate IDs are rejected so predictions and trace spans remain unambiguous.
 Each case also requires nonblank string `tenant` and `question` fields; invalid inputs are rejected before any retrieval runs.

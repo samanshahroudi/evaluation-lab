@@ -246,7 +246,7 @@ def test_missing_case_id_is_rejected_before_retrieval():
 
 
 @pytest.mark.parametrize("case_id", [None, "", [], {}])
-def test_cli_rejects_invalid_case_ids_before_reading_predictions(tmp_path, monkeypatch, case_id):
+def test_cli_rejects_invalid_case_ids_before_reading_predictions(tmp_path, monkeypatch, capsys, case_id):
     from evaluation_lab.evaluate import main
 
     cases = tmp_path / "cases.json"
@@ -256,8 +256,13 @@ def test_cli_rejects_invalid_case_ids_before_reading_predictions(tmp_path, monke
     monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
                                     "--predictions", str(tmp_path / "missing.jsonl"),
                                     "--trace-file", str(trace)])
-    with pytest.raises(ValueError, match="case IDs must be nonblank strings"):
+    with pytest.raises(SystemExit) as exc:
         main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "case IDs must be nonblank strings" in captured.err
+    assert "cannot read predictions" not in captured.err
     assert not trace.exists()
 
 
@@ -295,7 +300,7 @@ def test_malformed_case_containers_are_rejected_before_retrieval(cases):
         evaluate(cases, lambda tenant, question: pytest.fail("unexpected retrieval"))
 
 
-def test_cli_rejects_nonobject_cases_before_reading_predictions(tmp_path, monkeypatch):
+def test_cli_rejects_nonobject_cases_before_reading_predictions(tmp_path, monkeypatch, capsys):
     from evaluation_lab.evaluate import main
 
     cases = tmp_path / "cases.json"
@@ -304,8 +309,13 @@ def test_cli_rejects_nonobject_cases_before_reading_predictions(tmp_path, monkey
     monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
                                     "--predictions", str(tmp_path / "missing.jsonl"),
                                     "--trace-file", str(trace)])
-    with pytest.raises(ValueError, match="evaluation needs labeled cases"):
+    with pytest.raises(SystemExit) as exc:
         main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "evaluation needs labeled cases" in captured.err
+    assert "cannot read predictions" not in captured.err
     assert not trace.exists()
 
 

@@ -80,7 +80,10 @@ def main() -> None:
         cases = json.loads(Path(args.cases).read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         parser.error(f"cannot read cases file {args.cases}: {exc}")
-    _validate_cases(cases)
+    try:
+        _validate_cases(cases)
+    except ValueError as exc:
+        parser.error(f"invalid cases file {args.cases}: {exc}")
     predictions = {}
     latencies = {}
     try:
