@@ -99,7 +99,8 @@ def main() -> None:
                          "prediction rows need a nonblank string case_id and hits")
         case_id = row["case_id"]
         if case_id in predictions:
-            raise ValueError(f"duplicate prediction for {case_id}")
+            parser.error(f"invalid prediction at line {line_number}: "
+                         f"duplicate prediction for {case_id}")
         predictions[case_id] = row["hits"]
         latency = row.get("latency_ms")
         if latency is not None and (
