@@ -50,6 +50,30 @@ def test_citation_check_rejects_malformed_brackets(answer):
     assert not citation_check(answer, {"runbook-1"})
 
 
+def test_cli_duplicate_predictions_are_usage_errors_without_report_or_traces(
+    tmp_path, monkeypatch, capsys,
+):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{
+        "id": "one", "tenant": "demo", "question": "unknown", "relevant_ids": [],
+    }]), encoding="utf-8")
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text('{"case_id": "one", "hits": []}\n' * 2, encoding="utf-8")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "line 2: duplicate prediction for one" in captured.err
+    assert "Traceback" not in captured.err
+    assert not trace.exists()
+
+
 def test_citation_check_accepts_repeated_and_multiple_valid_references():
     assert citation_check("Recovery [runbook-1] and handoff [handoff-2] [runbook-1].",
                           {"runbook-1", "handoff-2"})
