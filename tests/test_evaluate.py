@@ -228,9 +228,14 @@ def test_cli_rejects_invalid_latency_without_writing_traces(tmp_path, monkeypatc
     trace = tmp_path / "traces.jsonl"
     monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
                                     "--predictions", str(predictions), "--trace-file", str(trace)])
-    with pytest.raises(ValueError, match="latency_ms must be a finite nonnegative number"):
+    with pytest.raises(SystemExit) as exc:
         main()
-    assert capsys.readouterr().out == ""
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "line 1" in captured.err
+    assert "latency_ms must be a finite nonnegative number for one" in captured.err
+    assert "Traceback" not in captured.err
     assert not trace.exists()
 
 

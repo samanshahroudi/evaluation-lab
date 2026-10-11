@@ -32,6 +32,7 @@ Each labeled case must have a unique, nonblank string `id`; duplicate IDs are re
 Each case also requires nonblank string `tenant` and `question` fields; invalid inputs are rejected before any retrieval runs.
 `relevant_ids` must be a list of nonblank strings; use an empty list for an unanswerable case. Malformed labels are rejected before retrieval or scoring.
 Supplied `latency_ms` values must be finite, nonnegative numbers; omitted or null values remain null in reports. Invalid latencies are rejected before producing a report or writing traces.
+Invalid latencies produce a CLI usage error (exit 2) identifying the case ID and prediction line number.
 The CLI also requires unique tenant/question pairs, because its retriever selects predictions by tenant and question. Ambiguous pairs are rejected before scoring or writing traces.
 
 ## Concepts and choices
