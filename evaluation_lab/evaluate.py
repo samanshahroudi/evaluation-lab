@@ -113,11 +113,14 @@ def main() -> None:
             raise ValueError(f"latency_ms must be a finite nonnegative number for {case_id}")
         latencies[case_id] = latency
     if set(predictions) != {case["id"] for case in cases}:
-        raise ValueError("predictions must contain exactly one row per case")
+        parser.error("predictions must contain exactly one row per case")
     case_ids = {(case["tenant"], case["question"]): case["id"] for case in cases}
     if len(case_ids) != len(cases):
-        raise ValueError("CLI cases must have unique tenant/question pairs")
-    report = evaluate(cases, lambda tenant, question: predictions[case_ids[tenant, question]])
+        parser.error("CLI cases must have unique tenant/question pairs")
+    try:
+        report = evaluate(cases, lambda tenant, question: predictions[case_ids[tenant, question]])
+    except ValueError as exc:
+        parser.error(f"invalid predictions file {args.predictions}: {exc}")
     for row in report["cases"]:
         row["latency_ms"] = latencies[row["case"]]
     if args.trace_file:

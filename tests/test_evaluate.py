@@ -209,9 +209,13 @@ def test_cli_rejects_ambiguous_case_lookup_without_writing_traces(tmp_path, monk
     trace = tmp_path / "traces.jsonl"
     monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
                                     "--predictions", str(predictions), "--trace-file", str(trace)])
-    with pytest.raises(ValueError, match="unique tenant/question pairs"):
+    with pytest.raises(SystemExit) as exc:
         main()
-    assert capsys.readouterr().out == ""
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "unique tenant/question pairs" in captured.err
+    assert "Traceback" not in captured.err
     assert not trace.exists()
 
 
@@ -310,9 +314,13 @@ def test_cli_rejects_string_hits_without_report_or_traces(tmp_path, monkeypatch,
     trace = tmp_path / "traces.jsonl"
     monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
                                     "--predictions", str(predictions), "--trace-file", str(trace)])
-    with pytest.raises(ValueError, match="hits must be a list of objects"):
+    with pytest.raises(SystemExit) as exc:
         main()
-    assert capsys.readouterr().out == ""
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "hits must be a list of objects" in captured.err
+    assert "Traceback" not in captured.err
     assert not trace.exists()
 
 
@@ -364,5 +372,32 @@ def test_cli_rejects_malformed_prediction_rows(tmp_path, monkeypatch, capsys, pr
     assert captured.out == ""
     assert "invalid prediction at line 1" in captured.err
     assert "prediction rows need a nonblank string case_id and hits" in captured.err
+    assert "Traceback" not in captured.err
+    assert not trace.exists()
+
+
+@pytest.mark.parametrize("prediction_ids", [[], ["other"], ["one", "other"]])
+def test_cli_prediction_case_mismatch_is_usage_error_without_output(
+    tmp_path, monkeypatch, capsys, prediction_ids,
+):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{
+        "id": "one", "tenant": "demo", "question": "unknown", "relevant_ids": [],
+    }]), encoding="utf-8")
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text("".join(
+        json.dumps({"case_id": key, "hits": []}) + "\n" for key in prediction_ids
+    ), encoding="utf-8")
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "predictions must contain exactly one row per case" in captured.err
     assert "Traceback" not in captured.err
     assert not trace.exists()
