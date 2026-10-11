@@ -107,7 +107,8 @@ def main() -> None:
             isinstance(latency, bool) or not isinstance(latency, (int, float))
             or not math.isfinite(latency) or latency < 0
         ):
-            raise ValueError(f"latency_ms must be a finite nonnegative number for {case_id}")
+            parser.error(f"invalid prediction at line {line_number}: "
+                         f"latency_ms must be a finite nonnegative number for {case_id}")
         latencies[case_id] = latency
     if set(predictions) != {case["id"] for case in cases}:
         raise ValueError("predictions must contain exactly one row per case")
