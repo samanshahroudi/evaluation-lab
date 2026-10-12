@@ -5,6 +5,40 @@ import pytest
 from evaluation_lab.evaluate import citation_check, evaluate
 
 
+@pytest.mark.parametrize("foreign_rank", [1, 6])
+def test_cli_tenant_leak_fails_gate_even_with_perfect_recall(
+    tmp_path, monkeypatch, capsys, foreign_rank,
+):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    predictions = tmp_path / "predictions.jsonl"
+    trace = tmp_path / "traces.jsonl"
+    cases.write_text(json.dumps([{
+        "id": "one", "tenant": "demo", "question": "outage", "relevant_ids": ["relevant"],
+    }]), encoding="utf-8")
+    hits = [{"id": "relevant", "tenant": "demo"},
+            *({"id": f"other-{index}", "tenant": "demo"} for index in range(4))]
+    hits.insert(foreign_rank - 1, {"id": "private", "tenant": "other"})
+    predictions.write_text(json.dumps({"case_id": "one", "hits": hits}) + "\n",
+                           encoding="utf-8")
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--min-recall", "1",
+                                    "--trace-file", str(trace)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    report = json.loads(captured.out)
+    assert report["mean_recall_at_5"] == 1
+    assert report["tenant_safe"] is False
+    span = json.loads(trace.read_text(encoding="utf-8"))
+    assert span["tenant_safe"] is False
+    assert span["recall_at_5"] == 1
+    assert "private" not in trace.read_text(encoding="utf-8")
+
+
 @pytest.mark.parametrize("input_file", ["cases", "predictions"])
 @pytest.mark.parametrize("problem", ["missing", "directory", "invalid_utf8", "invalid_json"])
 def test_cli_input_file_errors_are_usage_errors_without_output(
