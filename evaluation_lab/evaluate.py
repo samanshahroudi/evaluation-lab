@@ -126,11 +126,14 @@ def main() -> None:
         row["latency_ms"] = latencies[row["case"]]
     if args.trace_file:
         trace_id = uuid.uuid4().hex
-        with Path(args.trace_file).open("a") as handle:
-            for row in report["cases"]:
-                handle.write(json.dumps({"trace_id": trace_id, "event": "retrieval_evaluated",
-                    "case_id": row["case"], "latency_ms": row["latency_ms"],
-                    "recall_at_5": row["recall_at_5"], "tenant_safe": row["tenant_safe"]}) + "\n")
+        try:
+            with Path(args.trace_file).open("a", encoding="utf-8") as handle:
+                for row in report["cases"]:
+                    handle.write(json.dumps({"trace_id": trace_id, "event": "retrieval_evaluated",
+                        "case_id": row["case"], "latency_ms": row["latency_ms"],
+                        "recall_at_5": row["recall_at_5"], "tenant_safe": row["tenant_safe"]}) + "\n")
+        except OSError as exc:
+            parser.error(f"cannot write trace file {args.trace_file}: {exc}")
     print(json.dumps(report, indent=2))
     if report["mean_recall_at_5"] < args.min_recall or not report["tenant_safe"]:
         raise SystemExit(1)

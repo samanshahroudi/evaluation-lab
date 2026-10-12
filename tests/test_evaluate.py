@@ -407,3 +407,28 @@ def test_cli_prediction_case_mismatch_is_usage_error_without_output(
     assert "predictions must contain exactly one row per case" in captured.err
     assert "Traceback" not in captured.err
     assert not trace.exists()
+
+
+@pytest.mark.parametrize("problem", ["directory", "missing_parent"])
+def test_unwritable_trace_file_is_usage_error_without_report(
+    tmp_path, monkeypatch, capsys, problem,
+):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([{
+        "id": "one", "tenant": "demo", "question": "unknown", "relevant_ids": [],
+    }]), encoding="utf-8")
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text('{"case_id": "one", "hits": []}\n', encoding="utf-8")
+    trace = tmp_path if problem == "directory" else tmp_path / "missing" / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert f"cannot write trace file {trace}" in captured.err
+    assert "Traceback" not in captured.err
+    assert predictions.read_text(encoding="utf-8") == '{"case_id": "one", "hits": []}\n'
