@@ -2,8 +2,25 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from evaluation_lab import seed
 from evaluation_lab.evaluate import main as evaluate_main
+
+
+@pytest.mark.parametrize("problem", ["directory", "missing_parent"])
+def test_unwritable_seed_output_is_usage_error(tmp_path, monkeypatch, capsys, problem):
+    output = tmp_path if problem == "directory" else tmp_path / "missing" / "predictions.jsonl"
+    monkeypatch.setattr("sys.argv", ["seed", "--out", str(output)])
+    with pytest.raises(SystemExit) as exc:
+        seed.main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert f"cannot write predictions file {output}" in captured.err
+    assert "Traceback" not in captured.err
+    if problem == "missing_parent":
+        assert not output.exists()
 
 
 def test_bundled_baseline_passes_release_gate_and_writes_redacted_traces(
