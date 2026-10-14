@@ -16,14 +16,21 @@ def main() -> None:
     parser.add_argument("--out", default="predictions.jsonl")
     args = parser.parse_args()
     root = Path(__file__).parent
-    cases = json.loads((root / "cases.json").read_text())
+    cases_path = root / "cases.json"
+    fixture_paths = sorted((root / "fixtures").glob("*.md"))
+    cases = json.loads(cases_path.read_text())
     documents = []
-    for path in sorted((root / "fixtures").glob("*.md")):
+    for path in fixture_paths:
         key = hashlib.sha256(f"demo:{path.name}:0".encode()).hexdigest()[:20]
         documents.append({"id": key, "tenant": "demo", "text": path.read_text()})
     documents.append({"id": "private-other-tenant", "tenant": "other", "text": "Private migration plan"})
     try:
-        with Path(args.out).open("w") as output:
+        output_path = Path(args.out)
+        if output_path.exists() and any(
+            output_path.samefile(path) for path in (cases_path, *fixture_paths)
+        ):
+            parser.error("predictions file must differ from cases and fixture files")
+        with output_path.open("w") as output:
             for case in cases:
                 start = time.perf_counter()
                 query_terms = terms(case["question"])

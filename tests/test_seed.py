@@ -1,11 +1,39 @@
 """Keep the documented baseline and its labeled fixture IDs in sync."""
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
 from evaluation_lab import seed
 from evaluation_lab.evaluate import main as evaluate_main
+
+
+@pytest.mark.parametrize("input_name", ["cases.json", "fixtures/oncall.md"])
+@pytest.mark.parametrize("alias", ["direct", "symlink", "hardlink"])
+def test_seed_cannot_overwrite_its_inputs(tmp_path, monkeypatch, capsys, input_name, alias):
+    bundled = Path(seed.__file__).parent
+    root = tmp_path / "evaluation_lab"
+    shutil.copytree(bundled / "fixtures", root / "fixtures")
+    shutil.copyfile(bundled / "cases.json", root / "cases.json")
+    monkeypatch.setattr(seed, "__file__", str(root / "seed.py"))
+    source = root / input_name
+    before = source.read_bytes()
+    output = source
+    if alias != "direct":
+        output = tmp_path / "predictions.jsonl"
+        if alias == "symlink":
+            output.symlink_to(source)
+        else:
+            output.hardlink_to(source)
+    monkeypatch.setattr("sys.argv", ["seed", "--out", str(output)])
+    with pytest.raises(SystemExit) as exc:
+        seed.main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "predictions file must differ from cases and fixture files" in captured.err
+    assert source.read_bytes() == before
 
 
 @pytest.mark.parametrize("problem", ["directory", "missing_parent"])
