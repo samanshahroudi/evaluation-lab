@@ -25,6 +25,7 @@ Seed-output write failures produce CLI usage errors (exit 2), naming the destina
 
 Case and prediction files use UTF-8. Missing or unreadable files and invalid JSON produce CLI usage errors (exit 2) before writing a report or traces; malformed prediction JSON and rows missing a valid case ID or hits include their line number.
 Trace-file write failures also produce CLI usage errors (exit 2), naming the destination before any report is printed. Traces are appended, so a write failure can leave partial spans.
+The trace destination must differ from both input files, including symlink and hard-link aliases; conflicting destinations are rejected before appending any spans.
 Duplicate prediction rows also produce a CLI usage error with the duplicate case ID and line number.
 
 `hits` must be a list of objects with nonblank string `id` and `tenant` fields; use `[]` for no results. Malformed hits, missing or unexpected prediction case IDs, and ambiguous tenant/question pairs produce CLI usage errors (exit 2) before a report or traces are written.

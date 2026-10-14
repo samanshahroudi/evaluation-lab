@@ -127,7 +127,12 @@ def main() -> None:
     if args.trace_file:
         trace_id = uuid.uuid4().hex
         try:
-            with Path(args.trace_file).open("a", encoding="utf-8") as handle:
+            trace_path = Path(args.trace_file)
+            if trace_path.exists() and any(
+                trace_path.samefile(path) for path in (args.cases, args.predictions)
+            ):
+                parser.error("trace file must differ from cases and predictions files")
+            with trace_path.open("a", encoding="utf-8") as handle:
                 for row in report["cases"]:
                     handle.write(json.dumps({"trace_id": trace_id, "event": "retrieval_evaluated",
                         "case_id": row["case"], "latency_ms": row["latency_ms"],
