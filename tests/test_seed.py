@@ -9,6 +9,37 @@ from evaluation_lab import seed
 from evaluation_lab.evaluate import main as evaluate_main
 
 
+@pytest.mark.parametrize("input_name,problem", [
+    ("cases.json", "missing"), ("cases.json", "directory"),
+    ("cases.json", "invalid_utf8"), ("cases.json", "invalid_json"),
+    ("fixtures/oncall.md", "directory"), ("fixtures/oncall.md", "invalid_utf8"),
+])
+def test_seed_input_errors_preserve_output(tmp_path, monkeypatch, capsys, input_name, problem):
+    bundled = Path(seed.__file__).parent
+    root = tmp_path / "evaluation_lab"
+    shutil.copytree(bundled / "fixtures", root / "fixtures")
+    shutil.copyfile(bundled / "cases.json", root / "cases.json")
+    monkeypatch.setattr(seed, "__file__", str(root / "seed.py"))
+    source = root / input_name
+    if problem in {"missing", "directory"}:
+        source.unlink()
+        if problem == "directory":
+            source.mkdir()
+    else:
+        source.write_bytes(b"\xff" if problem == "invalid_utf8" else b"{")
+    output = tmp_path / "predictions.jsonl"
+    output.write_bytes(b"existing predictions\n")
+    monkeypatch.setattr("sys.argv", ["seed", "--out", str(output)])
+    with pytest.raises(SystemExit) as exc:
+        seed.main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert f"cannot read input file {source}" in captured.err
+    assert "Traceback" not in captured.err
+    assert output.read_bytes() == b"existing predictions\n"
+
+
 @pytest.mark.parametrize("input_name", ["cases.json", "fixtures/oncall.md"])
 @pytest.mark.parametrize("alias", ["direct", "symlink", "hardlink"])
 def test_seed_cannot_overwrite_its_inputs(tmp_path, monkeypatch, capsys, input_name, alias):
