@@ -9,6 +9,28 @@ from evaluation_lab import seed
 from evaluation_lab.evaluate import main as evaluate_main
 
 
+@pytest.mark.parametrize("cases", [[], {}, [{"id": "broken"}], [{
+    "id": "broken", "tenant": "demo", "question": "incident", "relevant_ids": [None],
+}]])
+def test_invalid_seed_case_definitions_preserve_output(tmp_path, monkeypatch, capsys, cases):
+    root = tmp_path / "evaluation_lab"
+    root.mkdir()
+    cases_path = root / "cases.json"
+    cases_path.write_text(json.dumps(cases), encoding="utf-8")
+    monkeypatch.setattr(seed, "__file__", str(root / "seed.py"))
+    output = tmp_path / "predictions.jsonl"
+    output.write_bytes(b"existing predictions\n")
+    monkeypatch.setattr("sys.argv", ["seed", "--out", str(output)])
+    with pytest.raises(SystemExit) as exc:
+        seed.main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert f"invalid cases file {cases_path}" in captured.err
+    assert "Traceback" not in captured.err
+    assert output.read_bytes() == b"existing predictions\n"
+
+
 @pytest.mark.parametrize("input_name,problem", [
     ("cases.json", "missing"), ("cases.json", "directory"),
     ("cases.json", "invalid_utf8"), ("cases.json", "invalid_json"),

@@ -6,6 +6,8 @@ import re
 import time
 from pathlib import Path
 
+from .evaluate import _validate_cases
+
 
 def terms(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", text.lower()))
@@ -22,6 +24,10 @@ def main() -> None:
         cases = json.loads(cases_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         parser.error(f"cannot read input file {cases_path}: {exc}")
+    try:
+        _validate_cases(cases)
+    except ValueError as exc:
+        parser.error(f"invalid cases file {cases_path}: {exc}")
     documents = []
     for path in fixture_paths:
         key = hashlib.sha256(f"demo:{path.name}:0".encode()).hexdigest()[:20]
