@@ -31,6 +31,25 @@ def test_invalid_seed_case_definitions_preserve_output(tmp_path, monkeypatch, ca
     assert output.read_bytes() == b"existing predictions\n"
 
 
+def test_ambiguous_seed_cases_preserve_existing_predictions(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "evaluation_lab"
+    root.mkdir()
+    cases = [{"id": key, "tenant": "demo", "question": "outage", "relevant_ids": []}
+             for key in ("one", "two")]
+    (root / "cases.json").write_text(json.dumps(cases), encoding="utf-8")
+    monkeypatch.setattr(seed, "__file__", str(root / "seed.py"))
+    output = tmp_path / "predictions.jsonl"
+    output.write_bytes(b"existing predictions\n")
+    monkeypatch.setattr("sys.argv", ["seed", "--out", str(output)])
+    with pytest.raises(SystemExit) as exc:
+        seed.main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "CLI cases must have unique tenant/question pairs" in captured.err
+    assert output.read_bytes() == b"existing predictions\n"
+
+
 @pytest.mark.parametrize("input_name,problem", [
     ("cases.json", "missing"), ("cases.json", "directory"),
     ("cases.json", "invalid_utf8"), ("cases.json", "invalid_json"),

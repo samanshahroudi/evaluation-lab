@@ -24,6 +24,7 @@ The seed command runs a simple lexical baseline over the included fixture docume
 Seed-output write failures produce CLI usage errors (exit 2), naming the destination without printing a success message.
 Unreadable seed cases or fixtures, invalid UTF-8, and invalid cases JSON also produce usage errors (exit 2), naming the input before opening or overwriting the predictions file.
 The seed command also validates case definitions with the evaluator's rules before opening its output, preserving existing predictions when labels or case fields are invalid.
+It also rejects duplicate tenant/question pairs before opening the output, since those predictions cannot be consumed by the evaluation CLI.
 The seed command rejects output paths that refer to its cases file or fixture documents, including symbolic and hard links, before overwriting any input.
 
 Case and prediction files use UTF-8. Missing or unreadable files and invalid JSON produce CLI usage errors (exit 2) before writing a report or traces; malformed prediction JSON and rows missing a valid case ID or hits include their line number.

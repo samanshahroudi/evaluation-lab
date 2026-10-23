@@ -28,6 +28,8 @@ def main() -> None:
         _validate_cases(cases)
     except ValueError as exc:
         parser.error(f"invalid cases file {cases_path}: {exc}")
+    if len({(case["tenant"], case["question"]) for case in cases}) != len(cases):
+        parser.error("CLI cases must have unique tenant/question pairs")
     documents = []
     for path in fixture_paths:
         key = hashlib.sha256(f"demo:{path.name}:0".encode()).hexdigest()[:20]
