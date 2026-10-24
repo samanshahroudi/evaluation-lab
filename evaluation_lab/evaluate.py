@@ -108,7 +108,7 @@ def main() -> None:
         latency = row.get("latency_ms")
         if latency is not None and (
             isinstance(latency, bool) or not isinstance(latency, (int, float))
-            or not math.isfinite(latency) or latency < 0
+            or (isinstance(latency, float) and not math.isfinite(latency)) or latency < 0
         ):
             parser.error(f"invalid prediction at line {line_number}: "
                          f"latency_ms must be a finite nonnegative number for {case_id}")
