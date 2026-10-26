@@ -5,6 +5,46 @@ import pytest
 from evaluation_lab.evaluate import citation_check, evaluate
 
 
+def test_successful_cli_trace_appends_correlated_redacted_spans(tmp_path, monkeypatch, capsys):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([
+        {"id": "answerable", "tenant": "demo", "question": "sensitive question",
+         "relevant_ids": ["private-chunk"]},
+        {"id": "unanswerable", "tenant": "demo", "question": "another sensitive question",
+         "relevant_ids": []},
+    ]), encoding="utf-8")
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text("\n".join(json.dumps(row) for row in [
+        {"case_id": "answerable", "hits": [{"id": "private-chunk", "tenant": "demo",
+                                           "text": "private document text"}], "latency_ms": 12.5},
+        {"case_id": "unanswerable", "hits": []},
+    ]) + "\n", encoding="utf-8")
+    trace = tmp_path / "traces.jsonl"
+    existing = '{"event": "previous-run"}\n'
+    trace.write_text(existing, encoding="utf-8")
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    main()
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert json.loads(captured.out)["mean_recall_at_5"] == 1
+    contents = trace.read_text(encoding="utf-8")
+    assert contents.startswith(existing)
+    spans = [json.loads(line) for line in contents.splitlines()[1:]]
+    assert len(spans) == 2
+    trace_id = spans[0]["trace_id"]
+    assert len(trace_id) == 32
+    for span, case_id, latency in zip(spans, ["answerable", "unanswerable"], [12.5, None]):
+        assert span == {
+            "trace_id": trace_id, "event": "retrieval_evaluated", "case_id": case_id,
+            "latency_ms": latency, "recall_at_5": 1, "tenant_safe": True,
+        }
+    for sensitive in ("sensitive question", "private-chunk", "private document text"):
+        assert sensitive not in contents
+
+
 @pytest.mark.parametrize("input_name", ["cases", "predictions"])
 @pytest.mark.parametrize("alias", ["direct", "symlink", "hardlink"])
 def test_trace_destination_cannot_modify_inputs(
