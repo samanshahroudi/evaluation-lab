@@ -5,6 +5,35 @@ import pytest
 from evaluation_lab.evaluate import citation_check, evaluate
 
 
+def test_cli_malformed_hits_identify_prediction_line_and_case(tmp_path, monkeypatch, capsys):
+    from evaluation_lab.evaluate import main
+
+    cases = tmp_path / "cases.json"
+    cases.write_text(json.dumps([
+        {"id": "one", "tenant": "demo", "question": "first", "relevant_ids": []},
+        {"id": "two", "tenant": "demo", "question": "second", "relevant_ids": []},
+    ]), encoding="utf-8")
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text(
+        '{"case_id": "one", "hits": []}\n'
+        '{"case_id": "two", "hits": [{"id": "chunk", "tenant": " "}]}\n',
+        encoding="utf-8",
+    )
+    trace = tmp_path / "traces.jsonl"
+    monkeypatch.setattr("sys.argv", ["evaluate", "--cases", str(cases),
+                                    "--predictions", str(predictions), "--trace-file", str(trace)])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert str(predictions) in captured.err
+    assert "line 2" in captured.err
+    assert "case two" in captured.err
+    assert "hits must be a list of objects" in captured.err
+    assert not trace.exists()
+
+
 def test_successful_cli_trace_appends_correlated_redacted_spans(tmp_path, monkeypatch, capsys):
     from evaluation_lab.evaluate import main
 

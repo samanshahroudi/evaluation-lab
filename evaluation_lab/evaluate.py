@@ -11,9 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 
-def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
-    start = time.perf_counter()
-    hits = retrieve(case["tenant"], case["question"])
+def _validate_hits(hits: list[dict]) -> None:
     if not isinstance(hits, list) or any(
         not isinstance(hit, dict)
         or any(not isinstance(hit.get(field), str) or not hit[field].strip()
@@ -21,6 +19,12 @@ def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
         for hit in hits
     ):
         raise ValueError("hits must be a list of objects with nonblank string id and tenant")
+
+
+def score_case(case: dict, retrieve: Callable[[str, str], list[dict]]) -> dict:
+    start = time.perf_counter()
+    hits = retrieve(case["tenant"], case["question"])
+    _validate_hits(hits)
     ids = [hit["id"] for hit in hits[:5] if hit["tenant"] == case["tenant"]]
     expected = set(case["relevant_ids"])
     matched = expected & set(ids[:5])
@@ -104,6 +108,11 @@ def main() -> None:
         if case_id in predictions:
             parser.error(f"invalid prediction at line {line_number}: "
                          f"duplicate prediction for {case_id}")
+        try:
+            _validate_hits(row["hits"])
+        except ValueError as exc:
+            parser.error(f"invalid prediction in {args.predictions}, "
+                         f"line {line_number}, case {case_id}: {exc}")
         predictions[case_id] = row["hits"]
         latency = row.get("latency_ms")
         if latency is not None and (

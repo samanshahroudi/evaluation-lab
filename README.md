@@ -33,6 +33,7 @@ The trace destination must differ from both input files, including symlink and h
 Duplicate prediction rows also produce a CLI usage error with the duplicate case ID and line number.
 
 `hits` must be a list of objects with nonblank string `id` and `tenant` fields; use `[]` for no results. Malformed hits, missing or unexpected prediction case IDs, and ambiguous tenant/question pairs produce CLI usage errors (exit 2) before a report or traces are written.
+Malformed hits identify their prediction line number and case ID so the offending row is easy to locate.
 
 Cases must be a nonempty JSON list of objects with relevance labels. Malformed containers are rejected before retrieval.
 Invalid case definitions produce CLI usage errors (exit 2), including the cases file path and validation reason, before reading predictions or writing traces.
